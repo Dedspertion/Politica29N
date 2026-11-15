@@ -17,84 +17,241 @@ import androidx.compose.ui.unit.dp
 import com.example.politica29n.data.CampanaData
 import com.example.politica29n.data.mostrarFecha
 import com.example.politica29n.model.Participacion
-import com.example.politica29n.ui.componentes.*
+import com.example.politica29n.ui.componentes.BarraSuperior
+import com.example.politica29n.ui.componentes.Desplegable
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PantallaCrear(onGuardar: (Participacion) -> Unit, onCancelar: () -> Unit) {
+fun PantallaCrear(
+    onGuardar: (Participacion) -> Unit,
+    onCancelar: () -> Unit
+) {
+    // rememberSaveable conserva el formulario al girar el móvil.
     var politicoId by rememberSaveable { mutableStateOf("") }
+    var nombrePolitico by rememberSaveable { mutableStateOf("") }
     var partido by rememberSaveable { mutableStateOf("") }
     var rival by rememberSaveable { mutableStateOf("") }
     var temas by rememberSaveable { mutableStateOf(listOf<String>()) }
     var puntos by rememberSaveable { mutableFloatStateOf(0f) }
     var fecha by rememberSaveable { mutableStateOf<Long?>(null) }
-    var calendario by remember { mutableStateOf(false) }
+    var mostrarCalendario by remember { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf("") }
-    val politico = CampanaData.politicos.firstOrNull { it.id == politicoId }
 
-    val guardar: () -> Unit = {
-        if (politicoId.isEmpty() || partido.isEmpty() || rival.isEmpty() || temas.isEmpty() || fecha == null) {
+    val nombresPoliticos = mutableListOf<String>()
+    for (politico in CampanaData.politicos) {
+        nombresPoliticos.add(politico.nombre)
+    }
+
+    val nombresPartidos = mutableListOf<String>()
+    val partidosRivales = mutableListOf<String>()
+    for (opcion in CampanaData.partidos) {
+        nombresPartidos.add(opcion.nombre)
+        if (opcion.nombre != partido) {
+            partidosRivales.add(opcion.nombre)
+        }
+    }
+
+    fun guardarParticipacion() {
+        val fechaElegida = fecha
+
+        if (politicoId.isEmpty() || partido.isEmpty() || rival.isEmpty() ||
+            temas.isEmpty() || fechaElegida == null
+        ) {
             error = "Selecciona una persona, un partido, al menos un tema, un rival y una fecha."
         } else if (partido == rival) {
             error = "El partido rival debe ser diferente."
         } else {
-            onGuardar(Participacion(0, politicoId, partido, temas.toList(), puntos.roundToInt(), rival, fecha!!))
+            val nuevaParticipacion = Participacion(
+                id = 0,
+                politicoId = politicoId,
+                partido = partido,
+                temas = temas.toList(),
+                puntos = puntos.roundToInt(),
+                rival = rival,
+                fecha = fechaElegida
+            )
+            onGuardar(nuevaParticipacion)
         }
     }
-    // Tanto la flecha como el botón Atrás guardan, como pide el enunciado.
-    BackHandler { guardar() }
-    Scaffold(topBar = { BarraSuperior("Nueva intervención", guardar, "Volver y guardar") }) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("Registra un debate de tu campaña", style = MaterialTheme.typography.titleLarge)
-            Text("La flecha guarda y vuelve a la lista. Puedes salir sin guardar con Cancelar.",
-                style = MaterialTheme.typography.bodySmall)
-            if (error.isNotEmpty()) Text(error, color = MaterialTheme.colorScheme.error)
-            Desplegable("Político", politico?.nombre ?: "", CampanaData.politicos.map { it.nombre }) { nombre ->
-                val elegido = CampanaData.politicos.first { it.nombre == nombre }
-                politicoId = elegido.id
-                partido = elegido.partido
-                if (rival == partido) rival = ""
+
+    // La flecha y el botón Atrás intentan guardar el formulario.
+    BackHandler {
+        guardarParticipacion()
+    }
+
+    Scaffold(
+        topBar = {
+            BarraSuperior(
+                titulo = "Nueva intervención",
+                onVolver = { guardarParticipacion() },
+                descripcionVolver = "Volver y guardar"
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Registra un debate de tu campaña",
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                text = "La flecha guarda y vuelve a la lista. Puedes salir sin guardar con Cancelar.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            if (error.isNotEmpty()) {
+                Text(error, color = MaterialTheme.colorScheme.error)
             }
-            Desplegable("Partido en este debate", partido, CampanaData.partidos.map { it.nombre }) {
-                partido = it
-                if (rival == partido) rival = ""
-            }
-            Text("El partido se propone al elegir la persona. Puedes cambiarlo para esta simulación.",
-                style = MaterialTheme.typography.bodySmall)
-            Text("Temas tratados · elige uno o varios", style = MaterialTheme.typography.titleMedium)
+
+            Desplegable(
+                etiqueta = "Político",
+                valor = nombrePolitico,
+                opciones = nombresPoliticos,
+                onElegir = { nombre ->
+                    for (politico in CampanaData.politicos) {
+                        if (politico.nombre == nombre) {
+                            politicoId = politico.id
+                            nombrePolitico = politico.nombre
+                            partido = politico.partido
+                        }
+                    }
+                    if (rival == partido) {
+                        rival = ""
+                    }
+                }
+            )
+            Desplegable(
+                etiqueta = "Partido en este debate",
+                valor = partido,
+                opciones = nombresPartidos,
+                onElegir = { partidoElegido ->
+                    partido = partidoElegido
+                    if (rival == partido) {
+                        rival = ""
+                    }
+                }
+            )
+            Text(
+                text = "El partido se propone al elegir la persona. Puedes cambiarlo para esta simulación.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Temas tratados · elige uno o varios",
+                style = MaterialTheme.typography.titleMedium
+            )
             Column {
                 CampanaData.temas.forEach { tema ->
-                    Row(Modifier.fillMaxWidth().toggleable(value = tema in temas, role = Role.Checkbox,
-                        onValueChange = { marcado -> temas = if (marcado) temas + tema else temas - tema }),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = tema in temas, onCheckedChange = null, modifier = Modifier.padding(12.dp))
+                    val marcado = temas.contains(tema)
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = marcado,
+                                role = Role.Checkbox,
+                                onValueChange = { seleccionado ->
+                                    val nuevosTemas = temas.toMutableList()
+                                    if (seleccionado) {
+                                        nuevosTemas.add(tema)
+                                    } else {
+                                        nuevosTemas.remove(tema)
+                                    }
+                                    temas = nuevosTemas
+                                }
+                            ),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // La fila completa se encarga de marcar o desmarcar.
+                        Checkbox(
+                            checked = marcado,
+                            onCheckedChange = null,
+                            modifier = Modifier.padding(12.dp)
+                        )
                         Text(tema)
                     }
                 }
             }
-            Text("Puntuación ficticia: ${puntos.roundToInt()} / 100", style = MaterialTheme.typography.titleMedium)
-            Slider(value = puntos, onValueChange = { puntos = it.roundToInt().toFloat() },
-                valueRange = 0f..100f, steps = 99)
-            Desplegable("Partido rival", rival, CampanaData.partidos.map { it.nombre }.filter { it != partido }) { rival = it }
-            OutlinedButton(onClick = { calendario = true }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.DateRange, null)
+
+            Text(
+                text = "Puntuación ficticia: ${puntos.roundToInt()} / 100",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Slider(
+                value = puntos,
+                onValueChange = { nuevoValor ->
+                    puntos = nuevoValor.roundToInt().toFloat()
+                },
+                valueRange = 0f..100f,
+                steps = 99
+            )
+            Desplegable(
+                etiqueta = "Partido rival",
+                valor = rival,
+                opciones = partidosRivales,
+                onElegir = { partidoElegido ->
+                    rival = partidoElegido
+                }
+            )
+
+            OutlinedButton(
+                onClick = { mostrarCalendario = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.DateRange, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text(if (fecha == null) "Seleccionar fecha" else "Fecha: ${mostrarFecha(fecha!!)}")
+                val fechaElegida = fecha
+                if (fechaElegida == null) {
+                    Text("Seleccionar fecha")
+                } else {
+                    Text("Fecha: ${mostrarFecha(fechaElegida)}")
+                }
             }
-            if (error.isNotEmpty()) Text(error, color = MaterialTheme.colorScheme.error)
-            Button(onClick = guardar, modifier = Modifier.fillMaxWidth()) { Text("Guardar y volver") }
-            TextButton(onClick = onCancelar, modifier = Modifier.fillMaxWidth()) { Text("Cancelar sin guardar") }
+            if (error.isNotEmpty()) {
+                Text(error, color = MaterialTheme.colorScheme.error)
+            }
+            Button(
+                onClick = { guardarParticipacion() },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Guardar y volver")
+            }
+            TextButton(
+                onClick = onCancelar,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Cancelar sin guardar")
+            }
         }
     }
-    if (calendario) {
+
+    if (mostrarCalendario) {
         val estadoFecha = rememberDatePickerState(initialSelectedDateMillis = fecha)
-        DatePickerDialog(onDismissRequest = { calendario = false },
+
+        DatePickerDialog(
+            onDismissRequest = { mostrarCalendario = false },
             confirmButton = {
-                TextButton(enabled = estadoFecha.selectedDateMillis != null,
-                    onClick = { fecha = estadoFecha.selectedDateMillis; calendario = false }) { Text("Aceptar") }
-            }, dismissButton = { TextButton(onClick = { calendario = false }) { Text("Cancelar") } }) {
+                TextButton(
+                    enabled = estadoFecha.selectedDateMillis != null,
+                    onClick = {
+                        fecha = estadoFecha.selectedDateMillis
+                        mostrarCalendario = false
+                    }
+                ) {
+                    Text("Aceptar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarCalendario = false }) {
+                    Text("Cancelar")
+                }
+            }
+        ) {
             DatePicker(state = estadoFecha)
         }
     }

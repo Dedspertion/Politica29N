@@ -12,17 +12,28 @@ import java.util.TimeZone
 object CampanaData {
     // Catálogo para los desplegables. No representa candidaturas oficiales del 29N.
     val partidos = listOf(
-        Partido("PP", 0xFF1565C0), Partido("PSOE", 0xFFB71C1C),
-        Partido("Vox", 0xFF387026), Partido("Sumar", 0xFFAD245C),
-        Partido("Podemos", 0xFF69358B), Partido("ERC", 0xFF876200),
-        Partido("Junts", 0xFF007B75), Partido("PNV", 0xFF23744F),
-        Partido("EH Bildu", 0xFF667327), Partido("BNG", 0xFF28749A),
-        Partido("Coalición Canaria", 0xFF926800), Partido("Nueva Canarias", 0xFF38724C),
-        Partido("UPN", 0xFF9C3030), Partido("PACMA", 0xFF477129),
-        Partido("Compromís", 0xFFA95118), Partido("Más Madrid", 0xFF087D70),
-        Partido("Izquierda Unida", 0xFFA42E39), Partido("Ciudadanos", 0xFFA34C16),
-        Partido("CUP", 0xFF766500), Partido("Teruel Existe", 0xFF436749),
-        Partido("PRC", 0xFF665B22), Partido("Partido Aragonés", 0xFF895522)
+        Partido("PP", 0xFF1565C0),
+        Partido("PSOE", 0xFFB71C1C),
+        Partido("Vox", 0xFF387026),
+        Partido("Sumar", 0xFFAD245C),
+        Partido("Podemos", 0xFF69358B),
+        Partido("ERC", 0xFF876200),
+        Partido("Junts", 0xFF007B75),
+        Partido("PNV", 0xFF23744F),
+        Partido("EH Bildu", 0xFF667327),
+        Partido("BNG", 0xFF28749A),
+        Partido("Coalición Canaria", 0xFF926800),
+        Partido("Nueva Canarias", 0xFF38724C),
+        Partido("UPN", 0xFF9C3030),
+        Partido("PACMA", 0xFF477129),
+        Partido("Compromís", 0xFFA95118),
+        Partido("Más Madrid", 0xFF087D70),
+        Partido("Izquierda Unida", 0xFFA42E39),
+        Partido("Ciudadanos", 0xFFA34C16),
+        Partido("CUP", 0xFF766500),
+        Partido("Teruel Existe", 0xFF436749),
+        Partido("PRC", 0xFF665B22),
+        Partido("Partido Aragonés", 0xFF895522)
     )
     val temas = listOf("Economía", "Vivienda", "Sanidad", "Educación", "Medio ambiente")
 
@@ -212,13 +223,41 @@ object CampanaData {
         Participacion(48, "aliaga", "Partido Aragonés", listOf("Economía", "Vivienda"), 86, "PSOE", fecha("07/11/2026"))
     )
 
-    fun politico(id: String) = politicos.first { it.id == id }
-    fun color(partido: String) = partidos.first { it.nombre == partido }.color
+    fun politico(id: String): Politico {
+        for (politico in politicos) {
+            if (politico.id == id) {
+                return politico
+            }
+        }
+        throw NoSuchElementException("No existe un político con id: $id")
+    }
+
+    fun color(partido: String): Long {
+        for (opcion in partidos) {
+            if (opcion.nombre == partido) {
+                return opcion.color
+            }
+        }
+        throw NoSuchElementException("No existe el partido: $partido")
+    }
 }
 
-// DatePicker usa medianoche UTC. Así evitamos que la fecha cambie por la zona horaria.
-fun formatoFecha() = SimpleDateFormat("dd/MM/yyyy", Locale("es", "ES")).apply {
-    timeZone = TimeZone.getTimeZone("UTC")
+// El calendario de Compose utiliza UTC; usamos la misma zona al leer y mostrar.
+fun formatoFecha(): SimpleDateFormat {
+    val formato = SimpleDateFormat("dd/MM/yyyy", Locale("es", "ES"))
+    formato.timeZone = TimeZone.getTimeZone("UTC")
+    return formato
 }
-fun fecha(texto: String): Long = formatoFecha().parse(texto)!!.time
-fun mostrarFecha(valor: Long): String = formatoFecha().format(Date(valor))
+
+fun fecha(texto: String): Long {
+    val fechaConvertida = formatoFecha().parse(texto)
+    if (fechaConvertida == null) {
+        throw IllegalArgumentException("Fecha no válida: $texto")
+    }
+    return fechaConvertida.time
+}
+
+fun mostrarFecha(valor: Long): String {
+    val fecha = Date(valor)
+    return formatoFecha().format(fecha)
+}

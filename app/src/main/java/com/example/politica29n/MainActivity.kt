@@ -11,6 +11,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = true
-        setContent { CampanaTheme { Navegacion() } }
+        setContent {
+            CampanaTheme {
+                Navegacion()
+            }
+        }
     }
 }

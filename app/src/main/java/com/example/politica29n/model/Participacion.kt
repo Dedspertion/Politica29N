@@ -20,4 +20,7 @@ data class Politico(
     val fuente: String
 )
 
-data class Partido(val nombre: String, val color: Long)
+data class Partido(
+    val nombre: String,
+    val color: Long
+)
